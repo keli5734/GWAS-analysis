@@ -1,3 +1,19 @@
+library(readxl)
+library(ggplot2)
+library(tidyverse)
+library(viridis)  
+library(dplyr)
+library(zoo)
+library(adephylo)
+library(cowplot)
+library(gridExtra)
+library(lubridate)
+library(lattice)
+library(grid)
+library(ggpubr)
+library(ape)
+
+
 metadata <- readRDS("rds_ge_ml/data_analysis_non_persistent.rds")
 
 Figure1A <- metadata %>% 
