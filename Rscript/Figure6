@@ -1,0 +1,393 @@
+library(dplyr)
+library(ggplot2)
+library(ape)
+library(BiocManager)
+library(ggtree)
+library(stringr)
+library(ggnewscale)
+library(treeio)
+library(tidyverse)
+alpha <- c("N501Y", "A570D", "D614G", "P681H", "T716I", "S982A", "D1118H")
+gamma <- c("L18F", "T20N", "P26S", "D138Y", "R190S", "K417T", "E484K", "N501Y", "D614G", "H655Y", "T1027I", "V1176F")
+delta <- c("T19R", "E156G", "L452R", "T478K", "D614G", "P681R", "D950N")
+XBB <- c("T19I", "L24S", "V83A", "G142D", "H146Q", "Q183E", "V213E", "G252V", "G339H", "R346T", "L368I", "S371F", "S373P", "S375F", "T376A", "D405N", "R408S", "K417N", "N440K", "V445P", "G446S", "N460K", "S477N", "T478K", "E484A", "F486P", "F490S", "Q498R", "N501Y", "Y505H", "D614G", "H655Y", "N679K", "P681H", "N764K", "D796Y", "Q954H", "N969K")
+BA.1 <- c("A67V", "T95I", "G142D", "N244I", "G339D", "S371L", "S373P", "S375F", "K417N", "N440K", "G446S", "S477N", "T478K", "E484A", "Q493R", "G496S", "Q498R", "N501Y", "Y505H", "T547K", "D614G", "H655Y", "N679K", "P681H", "N764K", "D796Y", "N856K", "Q954H", "N969K", "L981F")
+BA.2 <- c("T19I", "L24S", "G142D", "V213G", "G339D", "S371F", "S373P", "S375F", "T376A", "D405N", "R408S", "K417N", "N440K", "S477N", "T478K", "E484A", "Q493R", "Q498R", "N501Y", "Y505H", "D614G", "H655Y", "N679K", "P681H", "N764K", "D796Y", "Q954H", "N969K")
+BA.4 <- c("T19I", "L24S", "G142D", "V213G", "G339D", "S371F", "S373P", "S375F", "T376A", "D405N", "R408S", "K417N", "N440K", "L452R", "S477N", "T478K", "E484A", "F486V", "Q498R", "N501Y", "Y505H", "D614G", "H655Y", "N679K", "P681H", "N764K", "D796Y", "Q954H", "N969K")
+BA.5 <- c("T19I", "L24S", "G142D", "V213G", "G339D", "S371F", "S373P", "S375F", "T376A", "D405N", "R408S", "K417N", "N440K", "L452R", "S477N", "T478K", "E484A", "F486V", "Q498R", "N501Y", "Y505H", "D614G", "H655Y", "N679K", "P681H", "N764K", "D796Y", "Q954H", "N969K")
+
+AA_sub <- unique(c(alpha, gamma,delta,BA.1,BA.2,BA.4,BA.5,XBB))
+AA_sub.df <- data.frame(AA_changes = AA_sub, 
+                        pos = as.numeric(gsub("\\D", "", AA_sub)))
+AA_sub.df <- AA_sub.df[order(AA_sub.df$pos), ]
+
+AA_sub_ref <- data.frame(AA_changes = AA_sub.df$AA_changes,
+                         Alpha = ifelse(AA_sub.df$AA_changes %in% alpha, 1, 0),
+                         Gamma =  ifelse(AA_sub.df$AA_changes %in% gamma, 1, 0), 
+                         Delta =  ifelse(AA_sub.df$AA_changes %in% delta, 1, 0), 
+                         BA.1 =  ifelse(AA_sub.df$AA_changes %in% BA.1, 1, 0), 
+                         BA.2 =  ifelse(AA_sub.df$AA_changes %in% BA.2, 1, 0), 
+                         BA.4 =  ifelse(AA_sub.df$AA_changes %in% BA.4, 1, 0), 
+                         BA.5 =  ifelse(AA_sub.df$AA_changes %in% BA.5, 1, 0), 
+                         XBB =  ifelse(AA_sub.df$AA_changes %in% XBB, 1, 0)
+                         )
+                          
+
+
+
+
+# identified AA_sub in the S gene for different VOCs
+
+alpha <- c()
+gamma <- c()
+delta <- c("T19R", "P681R", "D950N")
+BA.1 <- c("A67V", "S371L", "G446S", "G496S","T547K","N856K","L981F")
+BA.2 <- c("T19I", "V213G", "T376A","D405N","R408S","L452Q","S704L")
+BA.4 <- c("T19I", "V213G", "T376A","D405N","R408S")
+BA.5 <- c("T19I", "V213G", "T376A","D405N","R408S")
+XBB <- c("T19I","G252V","T376A","D405N","R408S")
+
+AA_sub2 <- unique(c(alpha, gamma,delta,BA.1,BA.2,BA.4,BA.5,XBB))
+AA_sub.df2 <- data.frame(AA_changes = AA_sub2, 
+                        pos = as.numeric(gsub("\\D", "", AA_sub2)))
+AA_sub.df2 <- AA_sub.df2[order(AA_sub.df2$pos), ]
+
+AA_sub_query <- data.frame(AA_changes = AA_sub.df2$AA_changes,
+                         alpha_gwas = ifelse(AA_sub.df2$AA_changes %in% alpha, 1, 0),
+                         gamma_gwas =  ifelse(AA_sub.df2$AA_changes %in% gamma, 1, 0), 
+                         delta_gwas =  ifelse(AA_sub.df2$AA_changes %in% delta, 1, 0), 
+                         BA.1_gwas =  ifelse(AA_sub.df2$AA_changes %in% BA.1, 1, 0), 
+                         BA.2_gwas =  ifelse(AA_sub.df2$AA_changes %in% BA.2, 1, 0), 
+                         BA.4_gwas =  ifelse(AA_sub.df2$AA_changes %in% BA.4, 1, 0), 
+                         BA.5_gwas =  ifelse(AA_sub.df2$AA_changes %in% BA.5, 1, 0), 
+                         XBB_gwas =  ifelse(AA_sub.df2$AA_changes %in% XBB, 1, 0)
+)
+
+
+join.df <- merge(AA_sub_ref, AA_sub_query, by = "AA_changes", all = TRUE)
+join.df[is.na(join.df)] <- 0
+join.df <- join.df %>% mutate(pos = as.numeric(gsub("\\D", "", AA_changes)))
+join.df <- join.df[order(join.df$pos), ]
+join.df <- join.df %>% select(-pos)
+join.df$AA_changes <- factor(join.df$AA_changes, 
+                             levels = rev(unique(join.df$AA_changes)))
+
+
+join.df.long <- pivot_longer(join.df[,-1], cols = everything(), names_to = "variable")
+join.df.long$name <- rep(join.df[,1], each = 16)
+join.df.long <- join.df.long %>% mutate(variable = ifelse(variable=="alpha_gwas","Alpha*",
+                                                          ifelse(variable=="gamma_gwas","Gamma*",
+                                                                 ifelse(variable=="delta_gwas","Delta*",
+                                                                        ifelse(variable=="BA.1_gwas","BA.1*",
+                                                                               ifelse(variable=="BA.2_gwas","BA.2*",
+                                                                                      ifelse(variable=="BA.4_gwas","BA.4*",
+                                                                                             ifelse(variable=="BA.5_gwas","BA.5*",
+                                                                                                    ifelse(variable=="XBB_gwas","XBB*",variable)))))))))
+ 
+join.df.long <- join.df.long %>%
+  filter(variable %in% c("Alpha", "Gamma", "Delta", "BA.1", "BA.2", "BA.4", "BA.5", "XBB"))
+
+
+                                                                                                   
+join.df.long$variable <- factor(join.df.long$variable, 
+                                levels = c("Alpha",#"Alpha*",
+                                           "Gamma",# "Gamma*",
+                                           "Delta",#"Delta*",
+                                           "BA.1",#"BA.1*",
+                                           "BA.2",#"BA.2*",
+                                           "BA.4",# "BA.4*",
+                                           "BA.5",#"BA.5*",
+                                           "XBB")) #"XBB*"))
+line_size = 2
+
+
+
+
+
+
+#include GWAS data
+alpha <- c("N501Y", "A570D", "D614G", "P681H", "T716I", "S982A", "D1118H")
+gamma <- c("L18F", "T20N", "P26S", "D138Y", "R190S", "K417T", "E484K", "N501Y", "D614G", "H655Y", "T1027I", "V1176F")
+delta <- c("T19R", "E156G", "L452R", "T478K", "D614G", "P681R", "D950N")
+XBB <- c("T19I", "L24S", "V83A", "G142D", "H146Q", "Q183E", "V213E", "G252V", "G339H", "R346T", "L368I", "S371F", "S373P", "S375F", "T376A", "D405N", "R408S", "K417N", "N440K", "V445P", "G446S", "N460K", "S477N", "T478K", "E484A", "F486P", "F490S", "Q498R", "N501Y", "Y505H", "D614G", "H655Y", "N679K", "P681H", "N764K", "D796Y", "Q954H", "N969K")
+BA.1 <- c("A67V", "T95I", "G142D", "N244I", "G339D", "S371L", "S373P", "S375F", "K417N", "N440K", "G446S", "S477N", "T478K", "E484A", "Q493R", "G496S", "Q498R", "N501Y", "Y505H", "T547K", "D614G", "H655Y", "N679K", "P681H", "N764K", "D796Y", "N856K", "Q954H", "N969K", "L981F")
+BA.2 <- c("T19I", "L24S", "G142D", "V213G", "G339D", "S371F", "S373P", "S375F", "T376A", "D405N", "R408S", "K417N", "N440K", "S477N", "T478K", "E484A", "Q493R", "Q498R", "N501Y", "Y505H", "D614G", "H655Y", "N679K", "P681H", "N764K", "D796Y", "Q954H", "N969K")
+BA.4 <- c("T19I", "L24S", "G142D", "V213G", "G339D", "S371F", "S373P", "S375F", "T376A", "D405N", "R408S", "K417N", "N440K", "L452R", "S477N", "T478K", "E484A", "F486V", "Q498R", "N501Y", "Y505H", "D614G", "H655Y", "N679K", "P681H", "N764K", "D796Y", "Q954H", "N969K")
+BA.5 <- c("T19I", "L24S", "G142D", "V213G", "G339D", "S371F", "S373P", "S375F", "T376A", "D405N", "R408S", "K417N", "N440K", "L452R", "S477N", "T478K", "E484A", "F486V", "Q498R", "N501Y", "Y505H", "D614G", "H655Y", "N679K", "P681H", "N764K", "D796Y", "Q954H", "N969K")
+AA_sub_ref <- unique(c(alpha, gamma,delta,BA.1,BA.2,BA.4,BA.5,XBB))
+
+alpha <- c()
+gamma <- c()
+delta <- c("T19R", "P681R", "D950N")
+BA.1 <- c("A67V", "S371L", "G446S", "G496S","T547K","N856K","L981F")
+BA.2 <- c("T19I", "V213G", "T376A","D405N","R408S","L452Q","S704L")
+BA.4 <- c("T19I", "V213G", "T376A","D405N","R408S")
+BA.5 <- c("T19I", "V213G", "T376A","D405N","R408S")
+XBB <- c("T19I","G252V","T376A","D405N","R408S")
+AA_sub_gwas <- unique(c(alpha, gamma,delta,BA.1,BA.2,BA.4,BA.5,XBB))
+ 
+AA_sub_all <- unique(c(AA_sub_ref, 
+                       AA_sub_gwas))
+
+
+AA_sub_all <- as.data.frame(AA_sub_all)
+AA_sub_all <- AA_sub_all %>% mutate(pos = as.numeric(gsub("\\D", "", AA_sub_all)))
+AA_sub_all <- AA_sub_all[order(AA_sub_all$pos), ]
+AA_sub_all <- AA_sub_all %>% select(-pos)
+AA_sub_all <- factor(AA_sub_all$AA_sub_all, 
+                     levels = AA_sub_all$AA_sub_all)
+
+GWAS.df <- data.frame(name = AA_sub_all, 
+                      variable = rep("GWAS", 70),
+                      value = rep(1, 70)) %>% 
+  mutate(value = ifelse(name %in% c("T19I", "V213G","T376A","D405N","R408S","L452Q","S704L","G252V"), 3, 
+                        ifelse(name %in% c("T19R", "A67V", "S371L", "G446S", "G496S", "T547K", 
+                                           "P681R", "N856K", "D950N", "L981F"), 2, 0)))
+ 
+
+combined.df <- rbind(join.df.long, GWAS.df)
+
+value_levels <- c("0" = "Not identified", "1" = "Key AA subs", "2" = "GWAS(-)", "3" = "GWAS(+)")
+
+Figure6A <- ggplot(combined.df, aes(x = variable, y = name, fill = factor(value))) +
+  geom_tile(color = "white", alpha = 1) + 
+  coord_equal(ratio = 1) +
+  scale_fill_manual(values = c( "2" = "#fb9a99", "0" = "#e7d4e8", "1" = "#9970ab", "3" = "#a6cee3"),
+                    labels = value_levels)+
+  #scale_fill_manual(values = c( "#fb9a99","#e7d4e8", "#9970ab", "#a6cee3")) +
+  labs(x = "", y = "Amino acid changes", title = "Amino acid changes in the S gene") + 
+  geom_vline(aes(xintercept = 8.5), color = "white", size = 2)+
+  theme_bw() +
+  theme(panel.grid.minor  = element_blank(), 
+        panel.grid.major  = element_blank(),
+        axis.line = element_line(colour = "black"))  + 
+  theme(legend.key = element_rect(fill = "white", colour = "white")) +
+  theme(panel.border = element_blank()) +
+  theme(
+    axis.text.x = element_text(face="bold", vjust = 0.5),
+    axis.text.y = element_text(face="bold"),
+    axis.title.x = element_text(face="bold"),
+    axis.title.y = element_text(face="bold"),
+    plot.title = element_text(face="bold", hjust = 0.5),
+    legend.position = "right",
+    legend.key.size = unit(1.0, "cm"))+
+  theme(axis.text.x = element_text(color="black",
+                                   size = 15, angle=90),
+        axis.text.y = element_text(color="black",
+                                   size= 15, angle=0),
+        text = element_text(size = 15),
+        legend.text = element_text(size = 18, face = "bold")) + 
+  guides(fill = guide_legend(title = "")) 
+
+
+
+alpha <- c("T1001I", "A1708D","I2230T","P314L")
+gamma <- c("S1188L","K1795Q","P314L","E1264D")
+delta <- c("A1306S","P2046L","P2287S","V2930L","T3255I","T3646A","P314L","G662S","P1000L","A1918V")
+XBB <- c("K47R","S135R","T842I","G1307S","L3027F","T3090I","L3201F","T3255I","P3395H","P314L","G662S","S959P","R1315C","I1566V","T2163I")
+BA.1 <- c("K856R", "S2083I","A2710T","T3255I","P3395H","I3758V","P314L","I1566V")
+BA.2 <- c("S135R","T842I","G1307S","L3027F","T3090I","L3201F","T3255I","P3395H","P314L","R1315C","I1566V","T2163I")
+BA.4 <- c("S135R", "T842I", "G1307S","L3027F","T3090I","T3255I","P3395H","P314L","R1315C","I1566V","T2163I")
+BA.5 <- c("S135R", "T842I", "G1307S","L3027F","T3090I","T3255I","P3395H","P314L","R1315C","I1566V","T2163I")
+ 
+
+
+AA_sub <- unique(c(alpha, gamma,delta,BA.1,BA.2,BA.4,BA.5,XBB))
+AA_sub.df <- data.frame(AA_changes = AA_sub, 
+                        pos = as.numeric(gsub("\\D", "", AA_sub)))
+AA_sub.df <- AA_sub.df[order(AA_sub.df$pos), ]
+
+AA_sub_ref <- data.frame(AA_changes = AA_sub.df$AA_changes,
+                         Alpha = ifelse(AA_sub.df$AA_changes %in% alpha, 1, 0),
+                         Gamma =  ifelse(AA_sub.df$AA_changes %in% gamma, 1, 0), 
+                         Delta =  ifelse(AA_sub.df$AA_changes %in% delta, 1, 0), 
+                         BA.1 =  ifelse(AA_sub.df$AA_changes %in% BA.1, 1, 0), 
+                         BA.2 =  ifelse(AA_sub.df$AA_changes %in% BA.2, 1, 0), 
+                         BA.4 =  ifelse(AA_sub.df$AA_changes %in% BA.4, 1, 0), 
+                         BA.5 =  ifelse(AA_sub.df$AA_changes %in% BA.5, 1, 0), 
+                         XBB =  ifelse(AA_sub.df$AA_changes %in% XBB, 1, 0)
+)
+
+
+ 
+
+
+# identified AA_sub in the S gene for different VOCs
+
+alpha <- c()
+gamma <- c()
+delta <- c("A1306S","P2287S","V2930L","T3255I","T3646A","H5401Y")
+BA.1 <- c("K856R","A2710T","T3255I","I3758V","V2857A","L5086I")
+BA.2 <- c("S135R","T842I","G1307S","L3027F","T3090I","I4915T","S5150F","K6597R")
+BA.4 <- c("S135R","T842I","G1307S","L3027F","T3090I","S5150F","K6597R")
+BA.5 <- c("S135R","T842I","G1307S","L3027F","T3090I","S5150F","K6597R")
+XBB <- c("S135R","T842I","G1307S","L3027F","T3090I","S5150F","K6597R")
+
+AA_sub2 <- unique(c(alpha, gamma,delta,BA.1,BA.2,BA.4,BA.5,XBB))
+AA_sub.df2 <- data.frame(AA_changes = AA_sub2, 
+                         pos = as.numeric(gsub("\\D", "", AA_sub2)))
+AA_sub.df2 <- AA_sub.df2[order(AA_sub.df2$pos), ]
+
+AA_sub_query <- data.frame(AA_changes = AA_sub.df2$AA_changes,
+                           alpha_gwas = ifelse(AA_sub.df2$AA_changes %in% alpha, 1, 0),
+                           gamma_gwas =  ifelse(AA_sub.df2$AA_changes %in% gamma, 1, 0), 
+                           delta_gwas =  ifelse(AA_sub.df2$AA_changes %in% delta, 1, 0), 
+                           BA.1_gwas =  ifelse(AA_sub.df2$AA_changes %in% BA.1, 1, 0), 
+                           BA.2_gwas =  ifelse(AA_sub.df2$AA_changes %in% BA.2, 1, 0), 
+                           BA.4_gwas =  ifelse(AA_sub.df2$AA_changes %in% BA.4, 1, 0), 
+                           BA.5_gwas =  ifelse(AA_sub.df2$AA_changes %in% BA.5, 1, 0), 
+                           XBB_gwas =  ifelse(AA_sub.df2$AA_changes %in% XBB, 1, 0)
+)
+
+
+join.df <- merge(AA_sub_ref, AA_sub_query, by = "AA_changes", all = TRUE)
+join.df[is.na(join.df)] <- 0
+join.df <- join.df %>% mutate(pos = as.numeric(gsub("\\D", "", AA_changes)))
+join.df <- join.df[order(join.df$pos), ]
+join.df <- join.df %>% select(-pos)
+join.df$AA_changes <- factor(join.df$AA_changes, 
+                             levels = rev(unique(join.df$AA_changes)))
+
+
+join.df.long <- pivot_longer(join.df[,-1], cols = everything(), names_to = "variable")
+join.df.long$name <- rep(join.df[,1], each = 16)
+join.df.long <- join.df.long %>% mutate(variable = ifelse(variable=="alpha_gwas","Alpha*",
+                                                          ifelse(variable=="gamma_gwas","Gamma*",
+                                                                 ifelse(variable=="delta_gwas","Delta*",
+                                                                        ifelse(variable=="BA.1_gwas","BA.1*",
+                                                                               ifelse(variable=="BA.2_gwas","BA.2*",
+                                                                                      ifelse(variable=="BA.4_gwas","BA.4*",
+                                                                                             ifelse(variable=="BA.5_gwas","BA.5*",
+                                                                                                    ifelse(variable=="XBB_gwas","XBB*",variable)))))))))
+
+join.df.long <- join.df.long %>%
+  filter(variable %in% c("Alpha", "Gamma", "Delta", "BA.1", "BA.2", "BA.4", "BA.5", "XBB"))
+
+
+
+join.df.long$variable <- factor(join.df.long$variable, 
+                                levels = c("Alpha",#"Alpha*",
+                                           "Gamma",# "Gamma*",
+                                           "Delta",#"Delta*",
+                                           "BA.1",#"BA.1*",
+                                           "BA.2",#"BA.2*",
+                                           "BA.4",# "BA.4*",
+                                           "BA.5",#"BA.5*",
+                                           "XBB")) #"XBB*"))
+line_size = 2
+
+
+
+p3 <- ggplot(join.df.long, aes(x = variable, y = name, fill = factor(value))) +
+  geom_tile(color = "white", alpha = 1, width = 1, height = 1) + 
+  coord_equal(ratio = 0.8) +
+  scale_fill_manual(values = c("#e7d4e8", "#9970ab")) +
+  labs(x = "", y = "Amino acid changes", title = "") + 
+  theme_bw() +
+  theme(panel.grid.minor  = element_blank(), 
+        panel.grid.major  = element_blank(),
+        axis.line = element_line(colour = "black"))  + 
+  theme(legend.key = element_rect(fill = "white", colour = "white")) +
+  theme(panel.border = element_blank()) +
+  theme(
+    axis.text.x = element_text(face="bold"),
+    axis.text.y = element_text(face="bold"),
+    axis.title.x = element_text(face="bold"),
+    axis.title.y = element_text(face="bold"),
+    plot.title = element_text(face="bold", hjust = 0.5),
+    legend.position = "na")+
+  theme(axis.text.x = element_text(color="black",
+                                   size = 15, angle=90),
+        axis.text.y = element_text(color="black",
+                                   size= 15, angle=0),
+        text = element_text(size = 15))  
+ 
+
+ 
+
+
+
+#include GWAS data
+alpha <- c("T1001I", "A1708D","I2230T","P314L")
+gamma <- c("S1188L","K1795Q","P314L","E1264D")
+delta <- c("A1306S","P2046L","P2287S","V2930L","T3255I","T3646A","P314L","G662S","P1000L","A1918V")
+XBB <- c("K47R","S135R","T842I","G1307S","L3027F","T3090I","L3201F","T3255I","P3395H","P314L","G662S","S959P","R1315C","I1566V","T2163I")
+BA.1 <- c("K856R", "S2083I","A2710T","T3255I","P3395H","I3758V","P314L","I1566V")
+BA.2 <- c("S135R","T842I","G1307S","L3027F","T3090I","L3201F","T3255I","P3395H","P314L","R1315C","I1566V","T2163I")
+BA.4 <- c("S135R", "T842I", "G1307S","L3027F","T3090I","T3255I","P3395H","P314L","R1315C","I1566V","T2163I")
+BA.5 <- c("S135R", "T842I", "G1307S","L3027F","T3090I","T3255I","P3395H","P314L","R1315C","I1566V","T2163I")
+AA_sub_ref <- unique(c(alpha, gamma,delta,BA.1,BA.2,BA.4,BA.5,XBB))
+
+alpha <- c()
+gamma <- c()
+delta <- c("A1306S","P2287S","V2930L","T3255I","T3646A","H5401Y")
+BA.1 <- c("K856R","A2710T","T3255I","I3758V","V2857A","L5086I")
+BA.2 <- c("S135R","T842I","G1307S","L3027F","T3090I","I4915T","S5150F","K6597R")
+BA.4 <- c("S135R","T842I","G1307S","L3027F","T3090I","S5150F","K6597R")
+BA.5 <- c("S135R","T842I","G1307S","L3027F","T3090I","S5150F","K6597R")
+XBB <- c("S135R","T842I","G1307S","L3027F","T3090I","S5150F","K6597R")
+AA_sub_gwas <- unique(c(alpha, gamma,delta,BA.1,BA.2,BA.4,BA.5,XBB))
+
+AA_sub_all <- unique(c(AA_sub_ref, 
+                       AA_sub_gwas))
+ 
+
+AA_sub_all <- as.data.frame(AA_sub_all)
+AA_sub_all <- AA_sub_all %>% mutate(pos = as.numeric(gsub("\\D", "", AA_sub_all)))
+AA_sub_all <- AA_sub_all[order(AA_sub_all$pos), ]
+AA_sub_all <- AA_sub_all %>% select(-pos)
+AA_sub_all <- factor(AA_sub_all$AA_sub_all, 
+                     levels = AA_sub_all$AA_sub_all)
+
+GWAS.df <- data.frame(name = AA_sub_all, 
+                      variable = rep("GWAS", 38),
+                      value = rep(1, 38)) %>% 
+  mutate(value = ifelse(name %in% c("K6597R", "S5150F", "I4915T", "T3090I","L3027F","G1307S","T842I","S135R"), 3, 
+                        ifelse(name %in% c("H5401Y", "L5086I", "I3758V", "T3646A","T3255I","V2930L","V2857A","A2710T",
+                                           "P2287S", "A1306S", "K856R","V2857A","L5086I"), 2, 0)))
+
+
+combined.df <- rbind(join.df.long, GWAS.df)
+
+value_levels <- c("0" = "Not identified", "1" = "Key AA subs", "2" = "GWAS(-)", "3" = "GWAS(+)")
+
+Figure6B <- ggplot(combined.df, aes(x = variable, y = name, fill = factor(value))) +
+  geom_tile(color = "white", alpha = 1, width = 1, height = 1) + 
+  coord_equal(ratio = 1) +
+  scale_fill_manual(values = c( "2" = "#fb9a99", "0" = "#e7d4e8", "1" = "#9970ab", "3" = "#a6cee3"),
+                    labels = value_levels)+
+  #scale_fill_manual(values = c( "#fb9a99","#e7d4e8", "#9970ab", "#a6cee3")) +
+  labs(x = "", y = "Amino acid changes", title = "Amino acid changes in the ORF1ab gene") + 
+  geom_vline(aes(xintercept = 8.5), color = "white", size = 2)+
+  theme_bw() +
+  theme(panel.grid.minor  = element_blank(), 
+        panel.grid.major  = element_blank(),
+        axis.line = element_line(colour = "black"))  + 
+  theme(legend.key = element_rect(fill = "white", colour = "white")) +
+  theme(panel.border = element_blank()) +
+  theme(
+    axis.text.x = element_text(face="bold", vjust = 0.5),
+    axis.text.y = element_text(face="bold"),
+    axis.title.x = element_text(face="bold"),
+    axis.title.y = element_text(face="bold"),
+    plot.title = element_text(face="bold", hjust = 0.5),
+    legend.position = "na")+
+  theme(axis.text.x = element_text(color="black",
+                                   size = 15, angle=90),
+        axis.text.y = element_text(color="black",
+                                   size= 15, angle=0),
+        text = element_text(size = 15)) + 
+  guides(fill = guide_legend(title = "")) 
+
+ 
+ 
+Figure6 <- ggarrange(Figure6A,Figure6B,
+                     align = "h", 
+                     nrow = 1,
+                     ncol = 2,
+                     labels = c("A", "B"),                                  # Labels of the scatter plot
+                     font.label = list(size = 25, color = "black"))
+
+            
+                     
+                             
