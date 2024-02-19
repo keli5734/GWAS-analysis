@@ -1,0 +1,202 @@
+
+library(readxl)
+library(ggplot2)
+library(tidyverse)
+library(viridis)  
+library(dplyr)
+library(zoo)
+library(adephylo)
+library(cowplot)
+library(gridExtra)
+library(lubridate)
+library(lattice)
+library(grid)
+library(ggpubr)
+library(ape)
+
+
+metadata <- readRDS("rds_ge_ml/data_analysis_non_persistent.rds")
+
+Figure1A <- metadata %>% 
+  mutate(Variants = factor(voc, 
+                           levels = c("Alpha", "Delta", "Gamma", "BA.1", "BA.2", "BA.4", "BA.5", "XBB", "Other"))) %>% 
+  group_by(Variants, collection_date_gsheet) %>% 
+  summarise(freq = n()) %>% 
+  ungroup() %>% 
+  group_by(collection_date_gsheet) %>%
+  mutate(freq2 = freq / sum(freq)) %>% 
+  ggplot(aes(x = collection_date_gsheet, y = freq, color = Variants, fill = Variants), alpha = .05) + 
+  geom_histogram(stat = "identity", width = 8) + 
+  theme_minimal()  +  
+  ylab("Daily number of sequences") + xlab("Date") +
+  theme(legend.key = element_rect(fill = "white", colour = "white"), legend.position = "NA") +
+  theme(panel.border = element_blank(), axis.line = element_line(colour = "black")) +
+  scale_fill_manual(values = c(
+    "Alpha" = "#67001f",
+    "Delta" = "#b2182b",
+    "Gamma" = "#d6604d",
+    "BA.1" = "#f4a582",
+    "BA.2" = "#053061",
+    "BA.4" = "#2166ac",
+    "BA.5" = "#4393c3",
+    "XBB" = "#c2a5cf",
+    "Other" = "#5aae61")) +
+  scale_color_manual(values = c(
+    "Alpha" = "#67001f",
+    "Delta" = "#b2182b",
+    "Gamma" = "#d6604d",
+    "BA.1" = "#f4a582",
+    "BA.2" = "#053061",
+    "BA.4" = "#2166ac",
+    "BA.5" = "#4393c3",
+    "XBB" = "#c2a5cf",
+    "Other" = "#5aae61")) +
+  theme(
+    axis.text.x = element_text(face="bold"),
+    axis.text.y = element_text(face="bold"),
+    axis.title.x = element_text(face="bold"),
+    axis.title.y = element_text(face="bold"),
+    plot.title = element_text(face="bold", hjust = 0.5),
+    #axis.line = element_blank(),
+    panel.grid.major = element_blank(),
+    panel.grid.minor = element_blank(),
+    legend.position = "top") + 
+  theme(axis.text.x = element_text(color="black",
+                                   size = 20, angle=0),
+        axis.text.y = element_text(color="black",
+                                   size= 20, angle=0),
+        text = element_text(size = 20)) + 
+  scale_x_continuous( 
+                   labels=c("", "2021-07","2022-01",
+                            "2022-07", "2023-01"))
+
+
+Figure1B <- metadata %>% 
+  mutate(yale_n1_ge_ml = log10(as.numeric(yale_n1_ge_ml))) %>% 
+  ggplot(aes(x = "" ,y = yale_n1_ge_ml))  + 
+  geom_jitter(aes(x = "", y = yale_n1_ge_ml), alpha = 0.3, color = "cornflowerblue", size = 2) + 
+  geom_boxplot(fill = "transparent", color = "black", size = 0.4, outlier.colour = "white") + 
+  theme_minimal()  +  
+  ylab("log10(viral copies GE/ml)") + xlab("") +
+  theme(legend.key = element_rect(fill = "white", colour = "white"), legend.position = "NA") +
+  theme(panel.border = element_blank(), axis.line = element_line(colour = "black")) +
+  theme(
+    axis.text.x = element_text(face="bold"),
+    axis.text.y = element_text(face="bold"),
+    axis.title.x = element_text(face="bold"),
+    axis.title.y = element_text(face="bold"),
+    plot.title = element_text(face="bold", hjust = 0.5),
+    #axis.line = element_blank(),
+    panel.grid.major = element_blank(),
+    panel.grid.minor = element_blank(),
+    legend.position = "top") + 
+  theme(axis.text.x = element_text(color="black",
+                                   size = 20, angle=0),
+        axis.text.y = element_text(color="black",
+                                   size= 20, angle=0),
+        text = element_text(size = 20))  
+
+
+
+
+### Figure 1B showing time-series of Ct-values ### 
+metadata <- metadata %>% 
+  mutate(month = month(collection_date_gsheet)) %>% 
+  mutate(year = year(collection_date_gsheet)) %>% 
+  mutate(year_month = paste0(year, "/", month))
+
+year <- unique(metadata$year)
+month <- sort(unique(metadata$month))
+
+levels <- matrix(0, nrow = 3, ncol = 12)
+for(i in 1:3){
+  for(j in 1:12){
+    levels[i,j] <- paste0(year[i], "/", month[j])
+  }
+}
+levels <- c(levels[1,], levels[2,], levels[3,])
+
+metadata$year_month <- factor(metadata$year_month, 
+                              levels = levels)
+metadata <- metadata[order(metadata$year_month), ]
+
+
+new_row <- metadata[2056,]
+new_row$year_month <- "2021/10"
+new_row$yale_n1_ge_ml <- NA
+
+new_row2 <- metadata[1,]
+new_row2$year_month <- "2021/1"
+new_row2$yale_n1_ge_ml <- NA
+
+
+
+metadata <- rbind(new_row2, metadata[1:2056, ], new_row, metadata[(2056 + 1):nrow(metadata), ])
+metadata$year_month <- factor(metadata$year_month, 
+                              levels = levels)
+
+
+Figure1C <- metadata %>% 
+  group_by(year_month) %>% 
+  mutate(med = median(log10(as.numeric(yale_n1_ge_ml)), na.rm = TRUE)) %>% 
+         # low = quantile(log10(as.numeric(yale_n1_ge_ml)), 0.025),
+         # upper = quantile(log10(as.numeric(yale_n1_ge_ml)), 0.975)) %>%
+  ungroup() %>% 
+  ggplot() + 
+  geom_jitter(aes(x = year_month, y = log10(as.numeric(yale_n1_ge_ml))), alpha = 0.8, color = "#fb9a99", size = 2) + 
+  geom_boxplot(aes(x = year_month, y = log10(as.numeric(yale_n1_ge_ml))), fill = "transparent", color = "black", size = 0.6, outlier.colour = "white") + 
+  stat_summary(aes(x = year_month, y = med), fun = "median", geom = "point", color = "#542788", size = 5) +
+  #geom_line(aes(x = year_month, y = med), color = "blue", size = 1) +
+
+  # geom_line(aes(x = year_month, y = med), size = 1) 
+  #geom_linerange(aes(x = year_month, y = med, ymin = low, ymax = upper), linewidth = 1, color = "black") + 
+  theme_minimal()  + 
+  ylab("log10(viral copies GE/ml)") + xlab("Date") +
+  theme(legend.key = element_rect(fill = "white", colour = "white"), legend.position = "NA") +
+  theme(panel.border = element_blank(), axis.line = element_line(colour = "black")) +
+  theme(
+    axis.text.x = element_text(face="bold"),
+    axis.text.y = element_text(face="bold"),
+    axis.title.x = element_text(face="bold"),
+    axis.title.y = element_text(face="bold"),
+    plot.title = element_text(face="bold", hjust = 0.5),
+    #axis.line = element_blank(),
+    panel.grid.major = element_blank(),
+    panel.grid.minor = element_blank(),
+    legend.position = "top") + 
+  theme(axis.text.x = element_text(color="black",
+                                   size = 20, angle=0),
+        axis.text.y = element_text(color="black",
+                                   size=20, angle=0),
+        text = element_text(size = 20)) + 
+  #scale_y_reverse() + 
+  # scale_x_discrete(breaks=c("2021/1","2021/6","2021/12",
+  #                           "2022/6", "2022/12"),
+  #                  labels=c("2021/1","2021/6","2021/12",
+  #                           "2022/6", "2022/12"))
+  scale_x_discrete(breaks=c( "2021/7","2022/1",
+                            "2022/7", "2023/1"),
+                   
+                   labels=c("2021-07","2022-01",
+                            "2022-07", "2023-01"))
+
+ 
+
+ 
+
+
+Figure1BC <- ggarrange(Figure1B,Figure1C,
+                     nrow = 1,
+                     ncol = 2,
+                     labels = c("B", "C"),       
+                     widths = c(1, 3), # Labels of the scatter plot
+                     font.label = list(size = 25, color = "black"))
+
+ 
+
+
+Figure1 <- ggarrange(Figure1A,Figure1BC,
+                    nrow = 2,
+                    ncol = 1,
+                    labels = c("A", ""),                                  # Labels of the scatter plot
+                    font.label = list(size = 25, color = "black"))
