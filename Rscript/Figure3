@@ -1,0 +1,206 @@
+library(readxl)
+library(ggplot2)
+library(tidyverse)
+library(viridis)  
+library(dplyr)
+library(zoo)
+library(adephylo)
+library(cowplot)
+library(gridExtra)
+library(lubridate)
+library(lattice)
+library(grid)
+library(ggpubr)
+library(ape)
+
+
+combined_annotated_vcf_info_coeff <- readRDS("rds_ge_ml/combined_annotated_vcf_info_coeff_ge_ml.rds")
+threshold_value <-  0.05/10697
+colnames(combined_annotated_vcf_info_coeff)[2] <- "position"
+combined_annotated_vcf_info_coeff <- combined_annotated_vcf_info_coeff %>% 
+  select(-position.y) %>% 
+  mutate(position = as.numeric(position)) %>% 
+  mutate(Effect = ifelse(coeff >=0, "Positive", "Negative")) %>% 
+  mutate(significant = ifelse(pvalues < threshold_value, "significant", "non-significant")) %>% 
+  mutate(Gene = factor(Gene, 
+                       levels = c("ORF1ab", "S", "ORF3a", "E", "M", "ORF6", "ORF7a", "ORF7b", "ORF8", "N")))
+
+
+Figure3A <- combined_annotated_vcf_info_coeff %>% 
+  ggplot() + 
+  geom_point(aes(x = position, y = -log10(pvalues), alpha = significant, color = Gene), size = 6, shape = 18) + 
+  theme_classic() +
+  theme(legend.key = element_rect(fill = "white", colour = "white"), legend.position = "NA") +
+  theme(panel.border = element_blank(), axis.line = element_line(colour = "black")) +
+  theme(panel.grid.minor  = element_blank(), 
+        axis.line = element_line(colour = "black")) + 
+  scale_color_manual(values = c("ORF1ab" = "#8dd3c7",
+                                "S" = "#bc80bd",
+                                "ORF3a" = "#bebada",
+                                "E" = "#fb8072",
+                                "M" = "#80b1d3",
+                                "ORF6" = "#fdb462",
+                                "ORF7a" = "#b3de69",
+                                "ORF7b" = "#fccde5",
+                                "ORF8" = "#d95f0e",
+                                "N" = "#d9d9d9")) + 
+  scale_alpha_manual(values = c("significant" = 1, 
+                                "non-significant" = .2))  + 
+  guides(alpha = "none") + 
+  geom_hline(aes(yintercept = -log10(threshold_value)),linetype = "dashed", linewidth = 1.5) + 
+  theme(panel.grid.minor  = element_blank(), 
+        axis.line = element_line(colour = "black")) + 
+  labs(title = "",
+       x = "Position",
+       y = "-log10(p-values)") +
+  ylim(0,30) +
+  theme(axis.text.x = element_text(color="black",
+                                   size=20, angle=0),
+        axis.text.y = element_text(color="black",
+                                   size=20, angle=0),
+        text = element_text(size = 20))  +
+  theme(plot.title = element_text(hjust = 0.5)) + 
+  theme(legend.position = "top") + 
+  theme(
+    axis.text.x = element_text(face="bold"),
+    axis.text.y = element_text(face="bold"),
+    axis.title.x = element_text(face="bold"),
+    axis.title.y = element_text(face="bold"),
+    axis.line.x = element_line(color="black", linewidth = 1),
+    axis.line.y = element_line(color="black", linewidth = 1),
+    plot.title = element_text(face="bold", hjust = 0.5)
+  )  
+
+
+
+
+
+p_value_effect_size <- combined_annotated_vcf_info_coeff %>% 
+  filter(pvalues > 0) %>% 
+  ggplot() + 
+  geom_point(aes(x = abs(coeff), y = -log10(pvalues), color = Effect, alpha = significant), size = 6, shape = 18) + 
+  scale_color_manual(values = c("Negative" = "brown3",
+                                "Positive" = "skyblue4")) +
+  theme_classic() +
+  theme(legend.key = element_rect(fill = "white", colour = "white"), legend.position = "NA") +
+  theme(panel.border = element_blank(), axis.line = element_line(colour = "black")) +
+  theme(panel.grid.minor  = element_blank(), 
+        axis.line = element_line(colour = "black")) + 
+  scale_alpha_manual(values = c("significant" = 1, 
+                                "non-significant" = .1))  + 
+  guides(alpha = "none") + 
+  ylim(0, 30) +
+  geom_hline(aes(yintercept = -log10(threshold_value)),linetype = "dashed", linewidth = 1.5) + 
+  theme(panel.grid.minor  = element_blank(), 
+        axis.line = element_line(colour = "black")) + 
+  labs(title = "",
+       x = "Effect size",
+       y = "-log10(p-values)") +
+  theme(axis.text.x = element_text(color="black",
+                                   size=20, angle=0),
+        axis.text.y = element_text(color="black",
+                                   size=20, angle=0),
+        text = element_text(size = 20))  +  
+  theme(plot.title = element_text(hjust = 0.5)) + 
+  theme(legend.position = "top") + 
+  theme(
+    axis.text.x = element_text(face="bold"),
+    axis.text.y = element_text(face="bold"),
+    axis.title.x = element_text(face="bold"),
+    axis.title.y = element_text(face="bold"),
+    axis.line.x = element_line(color="black", linewidth = 1),
+    axis.line.y = element_line(color="black", linewidth = 1),
+    plot.title = element_text(face="bold", hjust = 0.5)
+  ) 
+    
+
+ 
+
+rectangle <- rectGrob(gp=gpar(col="grey2", fill=NA, lwd=3, lty =2))
+
+Figure3B <- p_value_effect_size + 
+  annotation_custom(
+    grob = rectangle,
+    xmin = 0, xmax = 1.7, ymin = 10 , ymax = 27
+  )  
+
+ 
+
+ 
+
+
+combined_annotated_vcf_info_coeff2 <- combined_annotated_vcf_info_coeff %>% 
+  filter( -log10(pvalues) >= 10 ) %>% 
+  filter(abs(coeff) >= 0 & abs(coeff) <= 1.7) 
+
+combined_annotated_vcf_info_coeff2 <- combined_annotated_vcf_info_coeff2[order(-as.numeric(combined_annotated_vcf_info_coeff2$position)), ]
+combined_annotated_vcf_info_coeff2 <- combined_annotated_vcf_info_coeff2 %>%
+  mutate(SNP = factor(SNP, levels = SNP)) %>% 
+  mutate(AminoAcidChange = factor(AminoAcidChange, levels = rev(AminoAcidChange)))
+
+
+combined_annotated_vcf_info_coeff2 <- combined_annotated_vcf_info_coeff2 %>% 
+  mutate(AminoAcidChange = as.character(AminoAcidChange)) %>% 
+  mutate(AminoAcidChange = ifelse(AminoAcidChange=="S371P", "S371L", AminoAcidChange)) %>% 
+  mutate(AminoAcidChange = factor(AminoAcidChange, levels = rev(AminoAcidChange)))
+
+
+category_colors <- c("ORF1ab" = "#8dd3c7",
+                     "S" = "#bc80bd",
+                     "ORF3a" = "#bebada",
+                     "E" = "#fb8072",
+                     "M" = "#80b1d3",
+                     "ORF6" = "#fdb462",
+                     "ORF7a" = "#b3de69",
+                     "ORF7b" = "#fccde5",
+                     "ORF8" = "#d95f0e",
+                     "N" = "#d9d9d9")
+
+Figure3C <- combined_annotated_vcf_info_coeff2 %>% 
+  mutate(IsSynonymous = if_else(IsSynonymous == 0, "NonSynonymous", "Synonymous")) %>% 
+  # filter(Gene == "S") %>% 
+  ggplot(aes(x = AminoAcidChange, y = coeff, color = Gene, shape = IsSynonymous)) + 
+  geom_point(size = 4) + 
+  geom_errorbar(aes(ymin = coeff - 2*stdv,  ymax = coeff + 2*stdv, color = Gene), 
+                width = .5, linewidth = 1.2,
+                position=position_dodge(.9)) + 
+  guides(shape = guide_legend(title = "", ncol = 2),
+         color = guide_legend(override.aes = list(size = 0))) + 
+  geom_hline(aes(yintercept = 0), linetype = "dashed", linewidth = 1.5) + 
+  scale_color_manual(values = category_colors) + 
+  scale_shape_manual(values = c("NonSynonymous" = 16,
+                                "Synonymous" = 17)) + 
+  theme_bw() +
+  theme(legend.key = element_rect(fill = "white", colour = "white"), legend.position = "NA") +
+  theme(panel.border = element_blank(), axis.line = element_line(colour = "black")) + 
+  theme(panel.grid.minor  = element_blank()) + 
+  labs(title = "",
+       x = "Amino acid change",
+       y = "Effect size") +
+  theme(axis.text.x = element_text(color="black",
+                                   size=15, angle=90,vjust = 0.5),
+        axis.text.y = element_text(color="black",
+                                   size=20, angle=0),
+        text = element_text(size = 20))  +
+  theme(plot.title = element_text(hjust = 0.5)) + 
+  theme(legend.position = "top") + 
+  #coord_flip() +
+  theme(
+    axis.text.x = element_text(face="bold"),
+    axis.text.y = element_text(face="bold"),
+    axis.title.x = element_text(face="bold"),
+    axis.title.y = element_text(face="bold"),
+    axis.line.x = element_line(color="black", linewidth = 1),
+    axis.line.y = element_line(color="black", linewidth = 1),
+    plot.title = element_text(face="bold", hjust = 0.5)) 
+ 
+
+ 
+ 
+Figure3 <- ggarrange(                                                 # First row with scatter plot
+                     ggarrange(Figure3A, Figure3B, ncol = 2, labels = c("A", "B"),
+                               font.label = list(size = 30, color = "black")), # Second row with box and dot plots
+                     Figure3C,
+                     nrow = 2,
+                     labels = c("","C"),                                   # Labels of the scatter plot
+                     font.label = list(size = 30, color = "black"))
