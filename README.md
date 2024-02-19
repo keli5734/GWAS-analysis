@@ -1,5 +1,5 @@
 
-  -> R code for statistical analyses and visualization is included in "R Scripts"
+  -> R code for visualization is included in "R Scripts"
 
   -> The "rds_ge_ml" folder gives the results of statistical analyses
   
