@@ -1,0 +1,459 @@
+library(dplyr)
+library(ggplot2)
+library(ape)
+library(BiocManager)
+library(ggtree)
+library(stringr)
+library(ggnewscale)
+library(treeio)
+library(tidyverse)
+
+test <-  figure4_data_Othernames %>%
+  group_by(collection_date_gsheet, voc) %>%
+  summarise(Freq0_K6597R = sum(K6597R == 0),
+            Freq1_K6597R = sum(K6597R == 1),
+            # Freq0_L6564L = sum(L6564L == 0),
+            # Freq1_L6564L = sum(L6564L == 1),
+            # Freq0_Y5715Y = sum(Y5715Y == 0), 
+            # Freq1_Y5715Y = sum(Y5715Y == 1), 
+            Freq0_S5150F = sum(S5150F == 0), 
+            Freq1_S5150F = sum(S5150F == 1), 
+            Freq0_I4915T = sum(I4915T == 0), 
+            Freq1_I4915T = sum(I4915T == 1), 
+            # Freq0_I4205I = sum(I4205I == 0), 
+            # Freq1_I4205I = sum(I4205I == 1), 
+            # Freq0_Y3803Y = sum(Y3803Y == 0), 
+            # Freq1_Y3803Y = sum(Y3803Y == 1),
+            # Freq0_R3394R = sum(R3394R == 0), 
+            # Freq1_R3394R = sum(R3394R == 1),  
+            # Freq0_D3311D = sum(D3311D == 0), 
+            # Freq1_D3311D = sum(D3311D == 1),
+            Freq0_T3090I = sum(T3090I == 0), 
+            Freq1_T3090I = sum(T3090I == 1), 
+            # Freq0_V3053V = sum(V3053V == 0), 
+            # Freq1_V3053V = sum(V3053V == 1), 
+            Freq0_L3027F = sum(L3027F == 0), 
+            Freq1_L3027F = sum(L3027F == 1), 
+            # Freq0_M2796M = sum(M2796M == 0), 
+            # Freq1_M2796M = sum(M2796M == 1), 
+            # Freq0_A1352A = sum(A1352A == 0), 
+            # Freq1_A1352A = sum(A1352A == 1),  
+            Freq0_G1307S = sum(G1307S == 0), 
+            Freq1_G1307S = sum(G1307S == 1),
+            Freq0_T842I = sum(T842I == 0), 
+            Freq1_T842I = sum(T842I == 1), 
+            # Freq0_I693I= sum(I693I == 0), 
+            # Freq1_I693I = sum(I693I == 1), 
+            Freq0_S135R = sum(S135R == 0), 
+            Freq1_S135R = sum(S135R == 1) 
+  )
+
+
+Ohter_names_pos <- factor(c("K6597R", "S5150F", "I4915T", "T3090I","L3027F","G1307S","T842I","S135R"),
+                          levels = rev(c("K6597R", "S5150F", "I4915T", "T3090I","L3027F","G1307S","T842I","S135R")))
+
+type <- factor(c("REF", "ALT"), levels = c("REF", "ALT"))
+test_long <-  gather(test, Name, Number, Freq0_K6597R:Freq1_S135R, factor_key=TRUE)
+test_long$Gene <- rep(Ohter_names_pos, each = length(test$Freq0_K6597R)*2)
+test_long$Name <- rep(rep(type, each = length(test$Freq0_K6597R)), length(unique(test_long$Gene)))
+
+total_freq <-  as.data.frame(table(metadata$collection_date_gsheet)) %>% 
+  rename(collection_date_gsheet = Var1) %>% 
+  mutate(collection_date_gsheet = as.Date(collection_date_gsheet))
+
+test_long_new_positive <- test_long %>% 
+  group_by(collection_date_gsheet, Name, Gene) %>% 
+  summarise(freq = sum(Number)) %>% 
+  ungroup() %>% 
+  left_join(.,total_freq) %>% 
+  mutate(freq = if_else(Name == "REF", -1 * freq, freq)) %>% 
+  mutate(Freq = freq/Freq) 
+
+
+
+# negative 
+
+
+test <-  figure4_data_Othernames %>%
+  group_by(collection_date_gsheet, voc) %>%
+  summarise(
+    # Freq0_L6319L = sum(L6319L == 0),
+    # Freq1_L6319L = sum(L6319L == 1),
+    Freq0_H5401Y = sum(H5401Y == 0),
+    Freq1_H5401Y = sum(H5401Y == 1),
+    Freq0_L5086I = sum(L5086I == 0), 
+    Freq1_L5086I = sum(L5086I == 1), 
+    # Freq0_A5062A = sum(A5062A == 0), 
+    # Freq1_A5062A = sum(A5062A == 1), 
+    # Freq0_V4310V = sum(V4310V == 0), 
+    # Freq1_V4310V = sum(V4310V == 1), 
+    Freq0_I3758V = sum(I3758V == 0), 
+    Freq1_I3758V = sum(I3758V == 1), 
+    # Freq0_V3689V = sum(V3689V == 0), 
+    # Freq1_V3689V = sum(V3689V == 1),
+    Freq0_T3646A = sum(T3646A == 0), 
+    Freq1_T3646A = sum(T3646A == 1),  
+    Freq0_T3255I = sum(T3255I == 0), 
+    Freq1_T3255I = sum(T3255I == 1),
+    Freq0_V2930L = sum(V2930L == 0), 
+    Freq1_V2930L = sum(V2930L == 1), 
+    # Freq0_D2907D = sum(D2907D == 0), 
+    # Freq1_D2907D = sum(D2907D == 1), 
+    Freq0_V2857A = sum(V2857A == 0), 
+    Freq1_V2857A = sum(V2857A == 1), 
+    Freq0_A2710T = sum(A2710T == 0), 
+    Freq1_A2710T = sum(A2710T == 1), 
+    Freq0_P2287S = sum(P2287S == 0), 
+    Freq1_P2287S = sum(P2287S == 1),  
+    # Freq0_A1707A = sum(A1707A == 0), 
+    # Freq1_A1707A = sum(A1707A == 1),
+    Freq0_A1306S = sum(A1306S == 0), 
+    Freq1_A1306S = sum(A1306S == 1), 
+    Freq0_K856R = sum(K856R == 0), 
+    Freq1_K856R = sum(K856R == 1) 
+  )
+
+
+#Ohter_names_neg <-  setdiff(Other_names, Ohter_names_pos) 
+
+Ohter_names_neg <-  factor(c("H5401Y", "L5086I", "I3758V", "T3646A","T3255I","V2930L","V2857A","A2710T",
+                             "P2287S", "A1306S", "K856R"),
+                           levels = rev(c("H5401Y", "L5086I", "I3758V", "T3646A","T3255I","V2930L","V2857A","A2710T",
+                                          "P2287S", "A1306S", "K856R")))
+
+
+
+type <- factor(c("REF", "ALT"), levels = c("REF", "ALT"))
+test_long <-  gather(test, Name, Number, Freq0_H5401Y:Freq1_K856R, factor_key=TRUE)
+test_long$Gene <- rep(Ohter_names_neg, each = length(test$Freq0_H5401Y)*2)
+test_long$Name <- rep(rep(type, each = length(test$Freq0_H5401Y)), length(unique(test_long$Gene)))
+
+
+total_freq <-  as.data.frame(table(metadata$collection_date_gsheet)) %>% 
+  rename(collection_date_gsheet = Var1) %>% 
+  mutate(collection_date_gsheet = as.Date(collection_date_gsheet))
+
+test_long_new_negative <- test_long %>% 
+  group_by(collection_date_gsheet, Name, Gene) %>% 
+  summarise(freq = sum(Number)) %>% 
+  ungroup() %>% 
+  left_join(.,total_freq) %>% 
+  mutate(freq = if_else(Name == "ALT", -1 * freq, freq)) %>% 
+  mutate(Freq = freq/Freq) 
+
+
+
+test_long_new <- rbind(test_long_new_positive, test_long_new_negative) %>% 
+  mutate(Gene = factor(Gene, levels = rev(sorted_vectors)))
+
+
+test_long_new <- test_long_new %>% filter(Name == "ALT")
+
+
+
+ 
+
+
+
+Figure5B_1 <- test_long_new %>% 
+  ggplot()+
+  scale_fill_gradient2(low = "#fb9a99", mid = NA, high = "#a6cee3", midpoint = 0,
+                       labels = c("REF(100%)","", "", "", "ALT(100%)")) +
+  geom_tile(aes(x = collection_date_gsheet, y=Gene, fill=Freq), color = NA, height= .8, alpha = 1) +
+  labs(x="Date", y="Amino acid changes") + 
+  theme_bw() +
+  theme(panel.grid.minor  = element_blank(), 
+        panel.grid.major  = element_blank(),
+        axis.line = element_line(colour = "black"))  + 
+  theme(legend.key = element_rect(fill = "white", colour = "white")) +
+  theme(panel.border = element_blank()) + 
+  theme(
+    axis.text.x = element_text(face="bold"),
+    axis.text.y = element_text(face="bold"),
+    axis.title.x = element_text(face="bold"),
+    axis.title.y = element_text(face="bold"),
+    plot.title = element_text(face="bold", hjust = 0.5),
+    legend.position = "na") + 
+  theme(
+    
+    legend.title = element_text(size=15, face="bold", vjust = 0.5, margin = margin(b = 20)),
+    legend.text  = element_text(size=15, face="bold"),
+    legend.key.height = grid::unit(.5,"cm"),           # height of legend key
+    legend.key.width  = grid::unit(2,"cm")) + 
+  theme(axis.text.x = element_text(color="black",
+                                   size = 25, angle=0),
+        axis.text.y = element_text(color="black",
+                                   size= 25, angle=0),
+        text = element_text(size = 25)) + 
+  scale_x_continuous( 
+    labels=c("", "2021-07","2022-01",
+             "2022-07", "2023-01")) + 
+  labs(fill = "")   
+
+Figure5B_1
+
+
+
+Figure5B <- ggarrange(seq_plot,Figure5B_1,
+                      nrow = 2,
+                      ncol = 1,
+                      labels = c("", ""),                                  # Labels of the scatter plot
+                      font.label = list(size = 25, color = "black"),
+                      align = "v", 
+                      heights = c(.8,3))  
+
+ 
+
+ 
+######################################################
+# changes
+######################################################
+# change legend title voc to variants, color scheme from ke
+voc_colors<-c("Alpha" = "#67001f",
+              "Delta" = "#b2182b",
+              "Gamma" = "#d6604d",
+              "BA.1" = "#f4a582",
+              "BA.2" = "#053061",
+              "BA.4" = "#2166ac",
+              "BA.5" = "#4393c3",
+              "XBB" = "#c2a5cf",
+              "Other" = "#5aae61",
+              "Wuhan" = "#878787")
+
+# make dated phylogeny from subsampled tree
+# subsampled tree, 1000 and 200+. Do for 1000 first.
+# see treedater.R
+
+# column border for heatmap 
+# change color scheme for snp presence, light grey for REF, darker blue for ALT
+
+
+#############################################################
+# Positive spike vs Negative spike
+#############################################################
+data5_plus <- readRDS("data5_plus.rds") # <- this gives interested 61 SNPs
+data5_plus$CodonPosition<-as.numeric(data5_plus$CodonPosition)
+
+df5_snps <- cbind(data5_plus[,1:3],
+                  data5_plus[,(ncol(data5_plus)-3+1):ncol(data5_plus)])
+df5_samp <- data5_plus[,4:(ncol(data5_plus)-3)]
+colnames(df5_samp) <- str_extract(colnames(df5_samp),pattern="EPI_ISL_[0-9]+")
+rownames(df5_samp)<-data5_plus$AminoAcidChange
+df5_samp<-t(df5_samp)
+summary(df5_samp)
+df5_samp<-data.frame(apply(df5_samp,2,as.factor))
+
+# Subset df5_samp for Positive spike
+aa_df <- df5_snps %>% filter(Gene=="ORF1ab" & coeff>0) %>% arrange(CodonPosition)
+aa_vec <- aa_df$AminoAcidChange
+df5_samp_S_positive <-df5_samp[,colnames(df5_samp)%in%aa_vec]
+rm(aa_df,aa_vec)
+
+aa_df <- df5_snps %>% filter(Gene=="ORF1ab" & coeff<0) %>% arrange(CodonPosition)
+aa_vec <- aa_df$AminoAcidChange
+df5_samp_S_negative <-df5_samp[,colnames(df5_samp)%in%aa_vec]
+rm(aa_df,aa_vec)
+
+
+
+########################################################
+## subsampled tree
+########################################################
+
+
+# Rename phylogeny tip labels, prepare tree graphic
+tr_down <- read.tree('iqtrees1000.treefile')
+df_tree <- data.frame(sample=tr_down$tip.label,epi_id=NA,date=NA) 
+
+
+df_tree$epi_id<-str_extract(df_tree$sample,pattern = 'EPI_ISL_[0-9]+')
+df_tree$date<-str_extract(df_tree$sample,pattern = '[0-9]+-[0-9]+-[0-9]+')
+tr_down$tip.label <-df_tree$epi_id
+
+data7 <- readRDS("data7.rds") # this gives all samples 9902
+
+# Prepare voc designation in df_tree
+df_voc <- data.frame(sample_name=data7$sample_name,voc=data7$voc)
+df_voc$sample_name<-str_extract(df_voc$sample_name,pattern='EPI_ISL_[0-9]+')
+
+df_tree$voc <-df_voc$voc[match(df_tree$epi_id,df_voc$sample_name)]
+df_tree <- df_tree[,c(2,1,3,4)] #%>% filter(!is.na(voc)) # just so that first column is epi_id for matching to ggtree 
+df_tree$voc[1] <-  "Wuhan"
+df_tree$voc <- factor(df_tree$voc, 
+                      levels = c("Wuhan", "Alpha", "Gamma", "Delta",
+                                 "BA.1","BA.2","BA.4","BA.5","XBB", "Other"))
+colnames(df_tree)[4] = "Variants"
+
+df_snp_S_minus <- df5_samp_S_negative[match(df_tree$epi_id,rownames(df5_samp_S_negative)),] 
+df_snp_S_minus[1,] <- c(rep(0,17))
+df_snp_S_minus <- df_snp_S_minus %>% 
+  select(rev(c("H5401Y", "L5086I", "I3758V", "T3646A","T3255I","V2930L","V2857A","A2710T",
+               "P2287S", "A1306S", "K856R")))
+rownames(df_snp_S_minus)[1] = "Wuhan" 
+row_names = rownames(df_snp_S_minus)
+df_snp_S_minus <- as.data.frame(lapply(df_snp_S_minus, as.numeric))
+rownames(df_snp_S_minus) <- row_names
+df_snp_S_minus <- -1* df_snp_S_minus 
+
+
+df_snp_S_plus <- df5_samp_S_positive[match(df_tree$epi_id,rownames(df5_samp_S_positive)),]
+df_snp_S_plus[1,] <- c(rep(0,18))
+df_snp_S_plus <- df_snp_S_plus %>% select(rev(c("K6597R", "S5150F", "I4915T", "T3090I",
+                                                "L3027F","G1307S","T842I","S135R")))
+rownames(df_snp_S_plus)[1] = "Wuhan" 
+
+
+vectors = c(colnames(df_snp_S_plus), colnames(df_snp_S_minus))
+
+# Step 1: Extract the numeric part (N) from each vector
+numeric_values <- as.numeric(substr(vectors, 2, nchar(vectors) - 1))
+
+# Step 2: Use the extracted numeric values to sort the vectors
+sorted_indices <- order(numeric_values)
+
+# Step 3: Reconstruct the vectors with the sorted order
+sorted_vectors <- vectors[sorted_indices]
+
+
+
+AA_changes <- cbind(df_snp_S_plus, df_snp_S_minus) %>% 
+  select(all_of(sorted_vectors))
+
+
+p0_down <- ggtree(tr_down, 
+                  size = 1.2) +
+  geom_treescale(x = 0,
+                 y=.75*length(tr_down$tip.label),
+                 fontsize = 4.5,
+                 color = "white",
+                 linesize = 2)+
+  ylim(-1,1.05*length(tr_down$tip.label))
+p0_down 
+
+#p0_down <- ggtree(tr_down) + geom_treescale(fontsize = 4,)
+
+
+
+pvoc_down <- p0_down %<+% 
+  df_tree + 
+  geom_tippoint(aes(color=Variants),size= 2, alpha = .75) +
+  scale_color_manual(values = voc_colors)+
+  theme(legend.position="right")+
+  guides(colour=guide_legend(override.aes = list(size=5))) 
+
+ 
+
+#geom_tiplab(align = TRUE, linetype="dashed", linesize=.3, color = "black", size = 0)
+pvoc_down <- 
+  pvoc_down  + 
+  geom_strip("EPI_ISL_10223852", "EPI_ISL_8563043", 
+             barsize = 0, 
+             color="white", 
+             label = "BA.1", 
+             align = FALSE, 
+             geom = "label", 
+             fill = voc_colors["BA.1"], 
+             offset = 1.5e-4,
+             fontsize = 5)  + 
+  geom_strip("EPI_ISL_11576296", "EPI_ISL_13145097", 
+             barsize = 0, 
+             color="white", 
+             label = "BA.2", 
+             align = FALSE, 
+             geom = "label", 
+             fill = voc_colors["BA.2"], 
+             offset = 1.5e-4,
+             fontsize = 5) + 
+  geom_strip("EPI_ISL_16732035", "EPI_ISL_17401769", 
+             barsize = 0, 
+             color="white", 
+             label = "XBB", 
+             align = FALSE, 
+             geom = "label", 
+             fill = voc_colors["XBB"], 
+             offset = -7e-4,
+             fontsize = 5) + 
+  geom_strip("EPI_ISL_15408289", "EPI_ISL_14594089", 
+             barsize = 0, 
+             color="white", 
+             label = "BA.4", 
+             align = FALSE, 
+             geom = "label", 
+             fill = voc_colors["BA.4"], 
+             offset = .5e-4,
+             fontsize = 5) + 
+  geom_strip("EPI_ISL_16824225", "EPI_ISL_15235151", 
+             barsize = 0, 
+             color="white", 
+             label = "BA.5", 
+             align = FALSE, 
+             geom = "label", 
+             fill = voc_colors["BA.5"], 
+             offset = .5e-4,
+             fontsize = 5) + 
+  geom_strip("EPI_ISL_4197984", "EPI_ISL_8145118", 
+             barsize = 0, 
+             color="white", 
+             label = "Delta", 
+             align = FALSE, 
+             geom = "label", 
+             fill = voc_colors["Delta"], 
+             offset = 3e-4,
+             fontsize = 5) + 
+  geom_strip("EPI_ISL_1963782", "EPI_ISL_3104687", 
+             barsize = 0, 
+             color="white", 
+             label = "Alpha", 
+             align = FALSE, 
+             geom = "label", 
+             fill = voc_colors["Alpha"], 
+             offset = 1e-4,
+             fontsize = 5) + 
+  geom_strip("EPI_ISL_1293215", "EPI_ISL_3104693", 
+             barsize = 0, 
+             color="white", 
+             label = "Gamma", 
+             align = FALSE, 
+             geom = "label", 
+             fill = voc_colors["Gamma"], 
+             offset = 2e-4,
+             fontsize = 5)
+
+ 
+
+heatmap_colors <- c("0"= "white",  
+                    "1"= "#a6cee3",
+                    "-1" = "#fb9a99") 
+new_order <- c("-1" = "Negative effects", "1" = "Positive effects", "0" = "")
+
+
+
+
+p_S_plus_down <- gheatmap(pvoc_down, AA_changes, 
+                          width = .8, 
+                          colnames_offset_y = 45,
+                          colnames_angle = 90, 
+                          font.size= 5.3,
+                          color= "transparent",
+                          hjust = 0.5,
+                          colnames_position = 'top') + 
+  scale_fill_manual(values=heatmap_colors,na.value = "white") + 
+  scale_fill_manual(values= heatmap_colors,
+                    na.value = 'white',
+                    name = "Amino acid changes",
+                    breaks = names(new_order),
+                    labels = new_order) +
+  theme(legend.position = 'right',
+        legend.box.spacing = unit(0,'cm'),
+        legend.text=element_text(size=rel(1.5)),
+        legend.title = element_text(size=rel(1.5))) 
+
+ 
+
+
+Figure5 <- ggarrange(p_S_plus_down, Figure5B,
+                     nrow = 2,
+                     labels = c("A","B"),
+                     heights = c(1,1.2),
+                     font.label = list(size = 30, color = "black"))
+ 
