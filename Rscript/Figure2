@@ -1,0 +1,275 @@
+library(readxl)
+library(ggplot2)
+library(tidyverse)
+library(viridis)  
+library(dplyr)
+library(zoo)
+library(adephylo)
+library(cowplot)
+library(gridExtra)
+library(lubridate)
+library(lattice)
+library(grid)
+library(ggpubr)
+library(ape)
+
+Figure2A <- metadata %>% 
+  mutate(age_group = if_else(age>=0 & age<18, "1",
+                             if_else(age>=18  & age<50, "2",
+                                     if_else(age>=50  & age<70, "3",
+                                             if_else(age>=70 , "4", "5"))))) %>% 
+  mutate(voc = factor(voc, 
+                      levels = c("Alpha", "Delta", "Gamma", "BA.1", "BA.2", "BA.4", "BA.5", "XBB", "Other"))) %>% 
+  dplyr::filter(!is.na(age_group)) %>% 
+  mutate(age_group = factor(age_group))  %>% 
+  ggplot(aes(x = age_group, y = log10(as.numeric(yale_n1_ge_ml)), color = age_group, fill = age_group)) + #, color = voc, fill = voc)) + 
+  geom_dotplot(binaxis='y', stackdir='center',
+               stackratio=.5, dotsize= 1, binwidth =  1/20, alpha = .8) + 
+  geom_boxplot(color = "black", fill = NA,   outlier.colour = "white", width = .3) + 
+  #scale_y_reverse() +
+  theme_classic() +
+  theme(legend.key = element_rect(fill = "white", colour = "white"), legend.position = "NA") +
+  theme(panel.border = element_blank(), axis.line = element_line(colour = "black")) +
+  theme(text = element_text(size = 25))  + 
+  scale_x_discrete(breaks = c(1,2,3,4),
+                   labels = c("< 18", "18-49", "50-69", "70+"))+
+  theme(panel.grid.minor  = element_blank(), 
+        axis.line = element_line(colour = "black")) + 
+  labs(
+    title = "Viral copies by Age Group",
+       x = "",
+       y = "log10(viral copies GE/ml)") +
+  theme(axis.text.x = element_text(color="black",
+                                   size=15, angle=0),
+        axis.text.y = element_text(color="black",
+                                   size=15, angle=0),
+        text = element_text(size = 15))  +
+  theme(plot.title = element_text(hjust = 0.5)) + 
+  theme(legend.position = "NA") + 
+  scale_color_manual(values = c(
+    "1" = "#9e9ac8",
+    "2" = "#807dba",
+    "3" = "#6a51a3",
+    "4" = "#54278f"))  +
+  scale_fill_manual(values = c(
+    "1" = "#9e9ac8",
+    "2" = "#807dba",
+    "3" = "#6a51a3",
+    "4" = "#54278f")) +
+  theme(
+    axis.text.x = element_text(face="bold"),
+    axis.text.y = element_text(face="bold"),
+    axis.title.x = element_text(face="bold"),
+    axis.title.y = element_text(face="bold"),
+    axis.line.x = element_line(color="black", linewidth = 1),
+    axis.line.y = element_line(color="black", linewidth = 1), 
+    plot.title = element_text(face="bold", hjust = 0.5)
+  )  #+ 
+  #facet_wrap(~age_group)  
+ 
+
+symnum.args <- list(cutpoints = c(0, 0.0001, 0.01, 0.05, 1), symbols = c( "***", "**", "*", "ns"))
+
+Figure2A = Figure2A  + stat_compare_means(
+    comparisons = list(c("3", "4"), c("2", "4"), c("1", "4") ), # Add more if needed
+    method = "t.test", # Choose the appropriate statistical test
+    label = "p.signif",
+    size = 6,
+    tip_length = 0.01,
+    symnum.args = symnum.args
+  )
+
+
+## Figure 2B ##
+## dot_plot for CT-values stratified by vax_dose
+
+Figure2B <- metadata %>% 
+  mutate(voc = factor(voc, 
+                      levels = c("Alpha", "Delta", "Gamma", "BA.1", "BA.2", "BA.4", "BA.5", "XBB", "Other"))) %>% 
+  ggplot(aes(x = as.factor(vax_doses), y = log10(as.numeric(yale_n1_ge_ml)), color = as.factor(vax_doses), fill = as.factor(vax_doses))) + 
+  geom_dotplot(binaxis='y', stackdir='center',
+               stackratio=.5, dotsize= 1, binwidth =  1/20, alpha = .8) + 
+  geom_boxplot(color = "black", fill = NA,   outlier.colour = "white", width = .3) + 
+  
+  #scale_y_reverse() +
+  theme_classic() +
+  theme(legend.key = element_rect(fill = "white", colour = "white"), legend.position = "NA") +
+  theme(panel.border = element_blank(), axis.line = element_line(colour = "black")) +
+  scale_x_discrete(breaks = c(0,1,2,3,4),
+                   labels = c("0 Doses", "1 Dose", "2 Doses", "2 Doses + \n 1 Booster", "2 Doses + \n 2 Boosters"))+
+  theme(panel.grid.minor  = element_blank(), 
+        axis.line = element_line(colour = "black")) + 
+  labs(
+    title = "Viral copies by Vaccination Status",
+       x = "",
+       y = "log10(viral copies GE/ml)") +
+  theme(axis.text.x = element_text(color="black",
+                                   size=15, angle=0),
+        axis.text.y = element_text(color="black",
+                                   size=15, angle=0),
+        text = element_text(size = 15))  +
+  theme(plot.title = element_text(hjust = 0.5)) + 
+  theme(legend.position = "NA") + 
+  scale_color_manual(values = c("0" = "#fa9fb5",
+                                "1" = "#f768a1",
+                                "2" = "#dd3497",
+                                "3" = "#ae017e",
+                                "4" = "#7a0177"))  +
+  scale_fill_manual(values = c("0" = "#fa9fb5",
+                               "1" = "#f768a1",
+                               "2" = "#dd3497",
+                               "3" = "#ae017e",
+                               "4" = "#7a0177"))  +
+  theme(
+    axis.text.x = element_text(face="bold"),
+    axis.text.y = element_text(face="bold"),
+    axis.title.x = element_text(face="bold"),
+    axis.title.y = element_text(face="bold"),
+    axis.line.x = element_line(color="black", linewidth = 1),
+    axis.line.y = element_line(color="black", linewidth = 1),
+    plot.title = element_text(face="bold", hjust = 0.5)
+  ) #+ 
+  #facet_wrap(~vax_doses_cat)
+
+Figure2B  = Figure2B + stat_compare_means(
+  comparisons = list(c("0", "1"), c("0", "2"),
+                     c("0","3"), c("0", "4")), # Add more if needed
+  method = "t.test", # Choose the appropriate statistical test
+  label = "p.signif",
+  size = 6,
+  tip_length = 0.01,
+  symnum.args = symnum.args
+)
+
+
+
+## Figure 2C ##
+## dot_plot for CT-values stratified by variants 
+
+Figure2C <- metadata %>% 
+  mutate(voc = factor(voc, 
+                      levels = c("Other","Alpha", "Delta", "Gamma", "BA.1", "BA.2", "BA.4", "BA.5", "XBB"))) %>% 
+  ggplot(aes(x = voc, y = log10(as.numeric(yale_n1_ge_ml)), color = voc, fill = voc)) + 
+  geom_dotplot(binaxis='y', stackdir='center',
+               stackratio=.5, dotsize= 1, binwidth =  1/20, alpha = .5) + 
+  geom_boxplot(color = "black", fill = NA,   outlier.colour = "white", width = .3) + 
+  
+  #scale_y_reverse() +
+  theme_classic() +
+  theme(legend.key = element_rect(fill = "white", colour = "white"), legend.position = "NA") +
+  theme(panel.border = element_blank(), axis.line = element_line(colour = "black")) +
+  theme(panel.grid.minor  = element_blank(), 
+        axis.line = element_line(colour = "black")) + 
+  labs(title = "Viral copies by variant",
+       x = "",
+       y = "log10(viral copies GE/ml)") +
+  theme(axis.text.x = element_text(color="black",
+                                   size=15, angle=0),
+        axis.text.y = element_text(color="black",
+                                   size=15, angle=0),
+        text = element_text(size = 15)) +
+  theme(plot.title = element_text(hjust = 0.5)) + 
+  theme(legend.position = "NA") +
+  scale_fill_manual(values = c(
+    "Alpha" = "#67001f",
+    "Delta" = "#b2182b",
+    "Gamma" = "#d6604d",
+    "BA.1" = "#f4a582",
+    "BA.2" = "#053061",
+    "BA.4" = "#2166ac",
+    "BA.5" = "#4393c3",
+    "XBB" = "#c2a5cf",
+    "Other" = "#5aae61")) +
+  scale_color_manual(values = c(
+    "Alpha" = "#67001f",
+    "Delta" = "#b2182b",
+    "Gamma" = "#d6604d",
+    "BA.1" = "#f4a582",
+    "BA.2" = "#053061",
+    "BA.4" = "#2166ac",
+    "BA.5" = "#4393c3",
+    "XBB" = "#c2a5cf",
+    "Other" = "#5aae61")) +
+  theme(
+    axis.text.x = element_text(face="bold"),
+    axis.text.y = element_text(face="bold"),
+    axis.title.x = element_text(face="bold"),
+    axis.title.y = element_text(face="bold"),
+    axis.line.x = element_line(color="black", linewidth = 1),
+    axis.line.y = element_line(color="black", linewidth = 1),
+    plot.title = element_text(face="bold", hjust = 0.5)
+  )
+
+Figure2C = Figure2C +  stat_compare_means(
+    comparisons = list(c("BA.1", "BA.2")), # Add more if needed
+    method = "t.test", # Choose the appropriate statistical test
+    label = "p.signif",
+    size = 6,
+    tip_length = 0.01,
+    symnum.args = symnum.args)
+
+  
+
+
+## Figure 2D ##
+  
+combined_p_values <-  readRDS("rds_ge_ml/simple_coeffs.rds")
+combined_p_values <- combined_p_values %>%
+  mutate( names = factor(c("Age", "Vax1", "Vax2", "Vax3","Vax4", "Alpha", "Delta", "Gamma", "BA.1", "BA.2", "BA.4", "BA.5", "XBB"), 
+                         levels = rev(c("Age", "Vax1", "Vax2", "Vax3","Vax4","Alpha", "Delta", "Gamma", "BA.1", "BA.2", "BA.4", "BA.5", "XBB"))))
+
+Figure2D <- ggplot(data = combined_p_values, aes(x = names, y = coeff, color = names)) + 
+  geom_point(size = 5) + 
+  geom_errorbar(aes(ymin = coeff - 2*stdv,  ymax = coeff + 2*stdv, color = names), 
+                width = .1, linewidth = 1,
+                position=position_dodge(.9)) + 
+  geom_hline(aes(yintercept = 0), linetype = "dashed") + 
+  scale_color_manual(values = c("Age" = "#54278f", 
+                                "Vax1" = "#f768a1",
+                                "Vax2" = "#dd3497",
+                                "Vax3" = "#ae017e",
+                                "Vax4" = "#7a0177",
+                                "Alpha" = "#67001f",
+                                "Delta" = "#b2182b",
+                                "Gamma" = "#d6604d",
+                                "BA.1" = "#f4a582",
+                                "BA.2" = "#053061",
+                                "BA.4" = "#2166ac",
+                                "BA.5" = "#4393c3",
+                                "XBB" = "#c2a5cf")) + 
+  
+  theme_classic() +
+  theme(legend.key = element_rect(fill = "white", colour = "white"), legend.position = "NA") +
+  theme(panel.border = element_blank(), axis.line = element_line(colour = "black")) +
+  theme(panel.grid.minor  = element_blank(), 
+        axis.line = element_line(colour = "black")) + 
+  labs(title = "Effect size of regression analysis",
+       x = "",
+       y = "Coefficients") +
+  theme(axis.text.x = element_text(color="black",
+                                   size=15, angle=0),
+        axis.text.y = element_text(color="black",
+                                   size=15, angle=0),
+        text = element_text(size = 15))  +
+  theme(plot.title = element_text(hjust = 0.5))  + 
+  theme(legend.position = "NA")   + 
+  theme(
+    axis.text.x = element_text(face="bold"),
+    axis.text.y = element_text(face="bold"),
+    axis.title.x = element_text(face="bold"),
+    axis.title.y = element_text(face="bold"),
+    axis.line.x = element_line(color="black", linewidth = 1),
+    axis.line.y = element_line(color="black", linewidth = 1),
+    plot.title = element_text(face="bold", hjust = 0.5)
+  )  + 
+  coord_flip() 
+
+ 
+
+Figure2 <- ggarrange(Figure2A, Figure2B, Figure2C, Figure2D,
+                     nrow = 2, 
+                     ncol = 2,
+                     labels = c("A", "B", "C", "D"),                                  # Labels of the scatter plot
+                     font.label = list(size = 30, color = "black"))
+
+Figure2
